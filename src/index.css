@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  --color-brand-orange: #E85D04;
+  --color-brand-terracotta: #D00000;
+  --color-brand-dark: #1A0F0A;
+  --color-brand-light: #FAF5F0;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-light text-brand-dark font-sans antialiased selection:bg-brand-orange/30;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-semibold tracking-tight;
+  }
+}
+
+.glass-card {
+  @apply bg-[#FFFCF9] border border-brand-orange/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl transition-all duration-500 overflow-hidden;
+}
+
+.orange-gradient {
+  background: linear-gradient(135deg, #FF8500 0%, #E85D04 100%);
+}
+
+.image-overlay {
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
+}
