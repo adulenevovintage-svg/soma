@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import type { FormEvent, MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
@@ -17,17 +18,35 @@ import {
   MapPin,
   Phone,
   Info,
+  RefreshCw,
   Wine,
   IceCream,
   Star,
   Leaf,
   ShoppingBag,
-  Coffee
+  Coffee,
+  Settings,
+  Plus,
+  Trash2,
+  Edit2
 } from 'lucide-react';
 import { MENU_DATA, CATEGORIES } from './constants';
 import { MenuItem, Category } from './types';
+import { db, auth, handleFirestoreError, OperationType } from './lib/firebase';
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  query, 
+  orderBy,
+  setDoc
+} from 'firebase/firestore';
+import { signInAnonymously } from 'firebase/auth';
 
-// Helper to get icons for Italian categories
+// Helper to get icons for Ethiopian categories
 const getCategoryIcon = (category: Category) => {
   switch (category) {
     case "Signature Specials": return <Star className="w-5 h-5" />;
@@ -48,15 +67,112 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
+  
+  // Admin State
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<Partial<MenuItem> | null>(null);
+
+  // Firestore Data State
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [isSyncing, setIsSyncing] = useState(true);
+
+  // Initialize Auth & Data
+  useEffect(() => {
+    const q = query(collection(db, 'menuItems'), orderBy('name', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as MenuItem));
+      
+      // If Firestore is empty and we haven't synced yet, seed it
+      if (items.length === 0 && isSyncing) {
+        console.log(`Database is empty. Seeding defaults...`);
+        seedDatabase();
+      } else {
+        setMenuItems(items);
+        setIsSyncing(false);
+      }
+    }, (error) => {
+      console.error("Snapshot error:", error);
+      setMenuItems(MENU_DATA);
+      setIsSyncing(false);
+    });
+
+    return () => unsubscribe();
+  }, [isSyncing]);
+
+  const seedDatabase = async () => {
+    try {
+      console.log("Seeding database...");
+      for (const item of MENU_DATA) {
+        const itemRef = doc(db, 'menuItems', item.id);
+        await setDoc(itemRef, item);
+      }
+      console.log("Seeding complete.");
+    } catch (err) {
+      console.error("Seed error detail:", err);
+      // Fallback to static if it truly fails
+      setMenuItems(MENU_DATA);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const filteredItems = useMemo(() => {
-    return MENU_DATA.filter(item => {
+    const list = menuItems.length > 0 ? menuItems : MENU_DATA;
+    return list.filter(item => {
       const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
       const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           (item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery, menuItems]);
+
+  const handleAdminLogin = (e: FormEvent) => {
+    e.preventDefault();
+    if (adminPassword === 'soma2024') {
+      setIsAdminMode(true);
+      setShowLoginModal(false);
+      setAdminPassword('');
+    } else {
+      alert("Invalid password");
+    }
+  };
+
+  const handleSaveItem = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingItem || !editingItem.name || !editingItem.price || !editingItem.category) return;
+
+    try {
+      if (editingItem.id) {
+        const itemRef = doc(db, 'menuItems', editingItem.id);
+        await updateDoc(itemRef, editingItem);
+      } else {
+        const newItem = {
+          ...editingItem,
+          id: `new-${Date.now()}`,
+          ingredients: editingItem.ingredients || []
+        } as MenuItem;
+        await addDoc(collection(db, 'menuItems'), newItem);
+      }
+      setShowEditModal(false);
+      setEditingItem(null);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'menuItems');
+    }
+  };
+
+  const handleDeleteItem = async (id: string, e: MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this item?")) return;
+    
+    try {
+      await deleteDoc(doc(db, 'menuItems', id));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `menuItems/${id}`);
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -83,16 +199,29 @@ export default function App() {
             </div>
           </div>
 
-          <div className="hidden lg:flex items-center gap-8">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-dark/50">
-              <Clock className="w-4 h-4 text-brand-orange" />
-              <span>Open: 07:00 - 22:00</span>
+          <div className="flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-8 mr-4">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-dark/50">
+                <Clock className="w-4 h-4 text-brand-orange" />
+                <span>Open: 07:00 - 22:00</span>
+              </div>
+              <div className="h-6 w-px bg-brand-orange/20" />
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-dark/50">
+                <MapPin className="w-4 h-4 text-brand-orange" />
+                <span>Bole Bulbula</span>
+              </div>
             </div>
-            <div className="h-6 w-px bg-brand-orange/20" />
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-dark/50">
-              <MapPin className="w-4 h-4 text-brand-orange" />
-              <span>Bole Bulbula, Addis Ababa</span>
-            </div>
+
+            <button 
+              onClick={() => isAdminMode ? setIsAdminMode(false) : setShowLoginModal(true)}
+              className={`p-3 rounded-xl transition-all ${
+                isAdminMode 
+                ? 'bg-brand-orange text-white shadow-lg' 
+                : 'bg-brand-light text-brand-dark/20 hover:text-brand-orange hover:bg-white'
+              }`}
+            >
+              <Settings className={`w-5 h-5 ${isAdminMode ? 'animate-spin-slow' : ''}`} />
+            </button>
           </div>
         </div>
       </header>
@@ -167,9 +296,34 @@ export default function App() {
           </div>
         </section>
 
-        {/* Search Helper */}
-        <div className="mb-10 flex justify-end">
-          <div className="relative w-full max-w-xs">
+        {/* Search & Admin Actions */}
+        <div className="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
+          {isAdminMode && (
+            <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+              <button 
+                onClick={() => {
+                  setEditingItem({ name: '', price: 0, category: 'Main Course', description: '', ingredients: [], image: '' });
+                  setShowEditModal(true);
+                }}
+                className="px-6 py-3 bg-brand-dark text-white rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-orange transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add New Dish
+              </button>
+              <button 
+                onClick={() => {
+                  if (confirm("This will restore the original menu. Continue?")) {
+                    seedDatabase();
+                  }
+                }}
+                className="px-6 py-3 bg-brand-light border border-brand-orange/20 text-brand-orange rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Restore Originals
+              </button>
+            </div>
+          )}
+          <div className="relative w-full max-w-xs ml-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-dark/20 w-4 h-4" />
             <input 
               type="text" 
@@ -187,7 +341,7 @@ export default function App() {
             {filteredItems.length > 0 ? (
               <motion.div 
                 layout
-                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10"
+                className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-10"
               >
                 {filteredItems.map((item) => (
                   <motion.div
@@ -207,21 +361,43 @@ export default function App() {
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                      <div className="absolute top-4 right-4 bg-brand-orange text-white px-4 py-2 rounded-xl font-display font-bold shadow-xl">
-                        {item.price} <span className="text-[10px] font-medium opacity-80 uppercase">ETB</span>
+                      
+                      <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-brand-orange text-white px-2 py-1 md:px-4 md:py-2 rounded-lg md:rounded-xl font-display font-bold shadow-xl text-xs md:text-base">
+                        {item.price} <span className="text-[8px] md:text-[10px] font-medium opacity-80 uppercase">ETB</span>
                       </div>
+
+                      {isAdminMode && (
+                        <div className="absolute top-4 left-4 flex gap-2">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingItem(item);
+                              setShowEditModal(true);
+                            }}
+                            className="p-2 bg-white/90 backdrop-blur-md rounded-lg text-brand-dark hover:text-brand-orange transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={(e) => handleDeleteItem(item.id, e)}
+                            className="p-2 bg-white/90 backdrop-blur-md rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     
-                    <div className="p-6 md:p-8">
+                    <div className="p-4 md:p-8">
                       <div className="flex justify-between items-center mb-3 md:mb-4 text-brand-orange text-[9px] md:text-[10px] font-black uppercase tracking-widest">
                         <span>{item.category}</span>
                       </div>
                       
-                      <h4 className="text-xl md:text-2xl font-display font-bold text-brand-dark group-hover:text-brand-orange transition-colors mb-3 md:mb-4">
+                      <h4 className="text-sm md:text-2xl font-display font-bold text-brand-dark group-hover:text-brand-orange transition-colors mb-2 md:mb-4">
                         {item.name}
                       </h4>
                       
-                      <p className="text-brand-dark/50 text-xs md:text-sm leading-relaxed mb-4 md:mb-6 font-light line-clamp-2">
+                      <p className="text-brand-dark/50 text-[10px] md:text-sm leading-relaxed mb-3 md:mb-6 font-light line-clamp-2">
                         {item.description}
                       </p>
                       
@@ -243,6 +419,157 @@ export default function App() {
           </AnimatePresence>
         </section>
       </main>
+
+      {/* Admin Modals */}
+      <AnimatePresence>
+        {showLoginModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLoginModal(false)}
+              className="absolute inset-0 bg-brand-dark/90 backdrop-blur-md" 
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl"
+            >
+              <h3 className="text-2xl font-display font-bold text-brand-dark mb-6">Admin Access</h3>
+              <form onSubmit={handleAdminLogin}>
+                <input 
+                  type="password" 
+                  autoFocus
+                  placeholder="Enter Password..."
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-full bg-brand-light border border-brand-orange/20 rounded-xl px-5 py-4 text-brand-dark focus:outline-none focus:border-brand-orange mb-6"
+                />
+                <div className="flex gap-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowLoginModal(false)}
+                    className="flex-1 px-6 py-4 bg-brand-light text-brand-dark rounded-xl font-bold text-[10px] uppercase tracking-widest"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 px-6 py-4 bg-brand-orange text-white rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-brand-orange/30"
+                  >
+                    Enter
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {showEditModal && editingItem && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 overflow-y-auto">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowEditModal(false)}
+              className="absolute inset-0 bg-brand-dark/90 backdrop-blur-md" 
+            />
+            <motion.div 
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              className="relative bg-[#FFFCF9] w-full max-w-2xl rounded-3xl p-8 md:p-12 shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <h3 className="text-3xl font-display font-bold text-brand-dark mb-8">
+                {editingItem.id ? 'Edit Dish' : 'Add New Dish'}
+              </h3>
+              
+              <form onSubmit={handleSaveItem} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-orange">Dish Name</label>
+                    <input 
+                      required
+                      value={editingItem.name}
+                      onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                      className="w-full bg-white border border-brand-orange/10 rounded-xl px-4 py-3 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-orange">Price (ETB)</label>
+                    <input 
+                      required
+                      type="number"
+                      value={editingItem.price}
+                      onChange={(e) => setEditingItem({...editingItem, price: Number(e.target.value)})}
+                      className="w-full bg-white border border-brand-orange/10 rounded-xl px-4 py-3 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-brand-orange">Category</label>
+                  <select 
+                    value={editingItem.category}
+                    onChange={(e) => setEditingItem({...editingItem, category: e.target.value as Category})}
+                    className="w-full bg-white border border-brand-orange/10 rounded-xl px-4 py-3 text-sm"
+                  >
+                    {CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-brand-orange">Description</label>
+                  <textarea 
+                    required
+                    value={editingItem.description}
+                    onChange={(e) => setEditingItem({...editingItem, description: e.target.value})}
+                    className="w-full bg-white border border-brand-orange/10 rounded-xl px-4 py-3 text-sm h-24 resize-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-brand-orange">Photo URL</label>
+                  <input 
+                    required
+                    value={editingItem.image}
+                    onChange={(e) => setEditingItem({...editingItem, image: e.target.value})}
+                    className="w-full bg-white border border-brand-orange/10 rounded-xl px-4 py-3 text-sm"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-brand-orange">Ingredients (Comma separated)</label>
+                  <input 
+                    value={editingItem.ingredients?.join(', ')}
+                    onChange={(e) => setEditingItem({...editingItem, ingredients: e.target.value.split(',').map(s => s.trim())})}
+                    placeholder="e.g. Flour, Sugar, Butter"
+                    className="w-full bg-white border border-brand-orange/10 rounded-xl px-4 py-3 text-sm"
+                  />
+                </div>
+
+                <div className="pt-6 flex gap-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowEditModal(false)}
+                    className="flex-1 px-8 py-4 bg-brand-light text-brand-dark rounded-xl font-bold text-[10px] uppercase tracking-widest"
+                  >
+                    Discard
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 px-8 py-4 bg-brand-dark text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-brand-orange transition-colors"
+                  >
+                    Save Dish
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Ingredient Insight Modal */}
       <AnimatePresence>
