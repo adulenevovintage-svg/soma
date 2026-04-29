@@ -28,7 +28,9 @@ import {
   Settings,
   Plus,
   Trash2,
-  Edit2
+  Edit2,
+  Copy,
+  CreditCard
 } from 'lucide-react';
 import { MENU_DATA, CATEGORIES } from './constants';
 import { MenuItem, Category } from './types';
@@ -73,6 +75,14 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
   const [editingItem, setEditingItem] = useState<Partial<MenuItem> | null>(null);
 
   // Firestore Data State
@@ -419,9 +429,140 @@ export default function App() {
           </AnimatePresence>
         </section>
       </main>
+      
+      {/* Floating Pay Now Button */}
+      <motion.button
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        onClick={() => setShowPaymentModal(true)}
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-6 py-4 bg-brand-dark text-white rounded-2xl shadow-2xl hover:bg-brand-orange transition-all active:scale-95 group overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-brand-orange translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+        <div className="relative flex items-center gap-3">
+          <CreditCard className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          <span className="font-display font-medium uppercase tracking-widest text-[10px]">Pay Now</span>
+        </div>
+      </motion.button>
 
       {/* Admin Modals */}
       <AnimatePresence>
+        {showPaymentModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPaymentModal(false)}
+              className="absolute inset-0 bg-brand-dark/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8">
+                <div className="flex justify-between items-center mb-8">
+                  <div>
+                    <h3 className="text-2xl font-display font-bold text-brand-dark">Payment Options</h3>
+                    <p className="text-brand-dark/50 text-xs uppercase tracking-widest font-bold mt-1">Soma Restaurant</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowPaymentModal(false)}
+                    className="p-3 bg-brand-light rounded-xl hover:bg-brand-orange/10 hover:text-brand-orange transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Telebirr */}
+                  <a 
+                    href="tel:+251933307614"
+                    className="flex items-center gap-4 p-4 bg-brand-light rounded-2xl border border-brand-orange/10 hover:border-brand-orange transition-all group"
+                  >
+                    <div className="w-12 h-12 bg-white rounded-xl overflow-hidden shadow-sm flex items-center justify-center p-1">
+                      <img 
+                        src="https://cdn.phototourl.com/member/2026-04-29-f3c7786b-4d31-4e77-9dd4-9d79a82200df.jpg" 
+                        alt="Telebirr" 
+                        className="w-full h-full object-contain"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-display font-bold text-brand-dark">Telebirr</p>
+                      <p className="text-[10px] text-brand-dark/50 font-bold uppercase tracking-tighter">+251 933 307 614</p>
+                    </div>
+                    <div className="p-2 bg-brand-orange text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Plus className="w-4 h-4 rotate-45" />
+                    </div>
+                  </a>
+
+                  {/* Bank Accounts */}
+                  <div className="p-6 bg-brand-dark rounded-2xl text-white space-y-6">
+                    <div className="group/bank relative">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1">
+                            <img 
+                              src="https://cdn.phototourl.com/member/2026-04-29-2ab185fb-529b-4c8a-8bcc-5b1aa22268b0.png" 
+                              alt="CBE Logo" 
+                              className="w-full h-full object-contain"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-[0.1em] text-brand-orange leading-tight">Commercial Bank <br/> of Ethiopia</span>
+                        </div>
+                        <button 
+                          onClick={() => copyToClipboard('100001256237', 'cbe')}
+                          className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-colors"
+                          title="Copy Account Number"
+                        >
+                          {copiedId === 'cbe' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-white/40" />}
+                        </button>
+                      </div>
+                      <p className="text-lg font-mono font-bold tracking-wider">100001256237</p>
+                    </div>
+
+                    <div className="h-px bg-white/5" />
+
+                    <div className="group/bank relative">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center p-1">
+                            <img 
+                              src="https://cdn.phototourl.com/member/2026-04-29-21ae147a-cafc-4c72-ba8a-8395f2a0b84f.png" 
+                              alt="Abyssinia Logo" 
+                              className="w-full h-full object-contain"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-[0.1em] text-brand-orange leading-tight">Bank of <br/> Abyssinia</span>
+                        </div>
+                        <button 
+                          onClick={() => copyToClipboard('1000004758696', 'boa')}
+                          className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-colors"
+                          title="Copy Account Number"
+                        >
+                          {copiedId === 'boa' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-white/40" />}
+                        </button>
+                      </div>
+                      <p className="text-lg font-mono font-bold tracking-wider">1000004758696</p>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setShowPaymentModal(false)}
+                  className="w-full mt-8 py-4 bg-brand-orange text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:shadow-lg hover:shadow-brand-orange/20 transition-all active:scale-95"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {showLoginModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
             <motion.div 
