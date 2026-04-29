@@ -491,8 +491,8 @@ export default function App() {
                           />
                         </div>
                         <div>
-                          <p className="font-display font-bold text-brand-dark">Telebirr Transfer</p>
-                          <p className="text-[9px] text-brand-dark/40 font-bold uppercase tracking-widest">+251 933 307 614</p>
+                          <p className="font-display font-bold text-brand-dark">Telebirr (SOMA)</p>
+                          <p className="text-[9px] text-brand-dark/40 font-bold uppercase tracking-widest">0933307614</p>
                         </div>
                       </div>
                       <button 
@@ -512,7 +512,7 @@ export default function App() {
                     <div className="relative group/qr">
                       <div id="telebirr-qr" className="bg-white p-4 rounded-3xl shadow-xl shadow-brand-orange/5 border border-brand-orange/10 transform transition-transform group-hover/qr:scale-105 duration-500">
                         <QRCodeSVG 
-                          value="0933307614" 
+                          value="TR:0933307614" 
                           size={160}
                           level="H"
                           includeMargin={false}
@@ -532,15 +532,22 @@ export default function App() {
                                   const ctx = canvas.getContext('2d');
                                   const img = new Image();
                                   img.onload = () => {
-                                    canvas.width = 1000;
-                                    canvas.height = 1000;
+                                    canvas.width = 1200;
+                                    canvas.height = 1200;
                                     if (ctx) {
                                       ctx.fillStyle = 'white';
-                                      ctx.fillRect(0, 0, 1000, 1000);
-                                      ctx.drawImage(img, 100, 100, 800, 800);
+                                      ctx.fillRect(0, 0, 1200, 1200);
+                                      ctx.drawImage(img, 100, 150, 1000, 1000);
+                                      ctx.fillStyle = '#111';
+                                      ctx.font = 'bold 70px system-ui';
+                                      ctx.textAlign = 'center';
+                                      ctx.fillText('SCAN TO PAY WITH TELEBIRR', 600, 90);
+                                      ctx.fillStyle = '#FF5C00';
+                                      ctx.font = 'bold 50px system-ui';
+                                      ctx.fillText('SOMA', 600, 1140);
                                       const pngFile = canvas.toDataURL('image/png');
                                       const downloadLink = document.createElement('a');
-                                      downloadLink.download = 'telebirr-qr-soma.png';
+                                      downloadLink.download = 'soma-telebirr-qr.png';
                                       downloadLink.href = pngFile;
                                       downloadLink.click();
                                     }
@@ -548,16 +555,13 @@ export default function App() {
                                   img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
                                 }
                               }}
-                              className="bg-brand-orange text-white p-3 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-transform flex flex-col items-center gap-1"
+                              className="bg-brand-orange text-white p-4 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-transform flex flex-col items-center gap-1 group/btn"
                             >
-                              <Plus className="w-5 h-5 rotate-45" />
-                              <span className="text-[8px] font-black uppercase">Save QR</span>
+                              <QrCode className="w-6 h-6 mb-1" />
+                              <span className="text-[10px] font-black uppercase tracking-widest">Save QR</span>
                             </button>
-                            <div className="bg-white/10 text-white p-3 rounded-full shadow-lg backdrop-blur-md">
-                              <QrCode className="w-6 h-6 animate-pulse" />
-                            </div>
                           </div>
-                          <p className="mt-3 text-[8px] text-white/70 font-bold uppercase tracking-widest px-4 text-center">Click plus to <br/> save image</p>
+                          <p className="mt-4 text-[9px] text-white/70 font-bold uppercase tracking-[0.2em] px-4 text-center">Click to download <br/> scan image</p>
                         </div>
                       </div>
                     </div>
