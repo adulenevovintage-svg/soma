@@ -30,8 +30,10 @@ import {
   Trash2,
   Edit2,
   Copy,
-  CreditCard
+  CreditCard,
+  QrCode
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { MENU_DATA, CATEGORIES } from './constants';
 import { MenuItem, Category } from './types';
 import { db, auth, handleFirestoreError, OperationType } from './lib/firebase';
@@ -476,27 +478,86 @@ export default function App() {
                 </div>
 
                 <div className="space-y-4">
-                  {/* Telebirr */}
-                  <a 
-                    href="tel:+251933307614"
-                    className="flex items-center gap-4 p-4 bg-brand-light rounded-2xl border border-brand-orange/10 hover:border-brand-orange transition-all group"
-                  >
-                    <div className="w-12 h-12 bg-white rounded-xl overflow-hidden shadow-sm flex items-center justify-center p-1">
-                      <img 
-                        src="https://cdn.phototourl.com/member/2026-04-29-f3c7786b-4d31-4e77-9dd4-9d79a82200df.jpg" 
-                        alt="Telebirr" 
-                        className="w-full h-full object-contain"
-                        referrerPolicy="no-referrer"
-                      />
+                  {/* Telebirr - New Strategy */}
+                  <div className="p-6 bg-brand-light rounded-[2rem] border border-brand-orange/10 flex flex-col items-center">
+                    <div className="flex items-center justify-between w-full mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white rounded-xl overflow-hidden shadow-sm flex items-center justify-center p-1">
+                          <img 
+                            src="https://cdn.phototourl.com/member/2026-04-29-f3c7786b-4d31-4e77-9dd4-9d79a82200df.jpg" 
+                            alt="Telebirr" 
+                            className="w-full h-full object-contain"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                        <div>
+                          <p className="font-display font-bold text-brand-dark">Telebirr Transfer</p>
+                          <p className="text-[9px] text-brand-dark/40 font-bold uppercase tracking-widest">+251 933 307 614</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => copyToClipboard('+251933307614', 'telebirr')}
+                        className={`p-3 rounded-xl transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest ${
+                          copiedId === 'telebirr' 
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-white hover:bg-brand-orange hover:text-white text-brand-dark shadow-sm'
+                        }`}
+                      >
+                        {copiedId === 'telebirr' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        {copiedId === 'telebirr' ? 'Copied' : 'Copy'}
+                      </button>
                     </div>
-                    <div className="flex-1">
-                      <p className="font-display font-bold text-brand-dark">Telebirr</p>
-                      <p className="text-[10px] text-brand-dark/50 font-bold uppercase tracking-tighter">+251 933 307 614</p>
+
+                    {/* QR Code Container */}
+                    <div className="relative group/qr">
+                      <div id="telebirr-qr" className="bg-white p-4 rounded-3xl shadow-xl shadow-brand-orange/5 border border-brand-orange/10 transform transition-transform group-hover/qr:scale-105 duration-500">
+                        <QRCodeSVG 
+                          value="+251933307614" 
+                          size={160}
+                          level="H"
+                          includeMargin={false}
+                          className="rounded-lg"
+                        />
+                        <div 
+                          className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover/qr:opacity-100 transition-opacity bg-brand-dark/60 backdrop-blur-[2px] rounded-3xl cursor-pointer"
+                          onClick={() => {
+                            const svg = document.querySelector('#telebirr-qr svg');
+                            if (svg) {
+                              const svgData = new XMLSerializer().serializeToString(svg);
+                              const canvas = document.createElement('canvas');
+                              const ctx = canvas.getContext('2d');
+                              const img = new Image();
+                              img.onload = () => {
+                                canvas.width = 1000;
+                                canvas.height = 1000;
+                                if (ctx) {
+                                  ctx.fillStyle = 'white';
+                                  ctx.fillRect(0, 0, 1000, 1000);
+                                  ctx.drawImage(img, 100, 100, 800, 800);
+                                  const pngFile = canvas.toDataURL('image/png');
+                                  const downloadLink = document.createElement('a');
+                                  downloadLink.download = 'telebirr-qr-soma.png';
+                                  downloadLink.href = pngFile;
+                                  downloadLink.click();
+                                }
+                              };
+                              img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+                            }
+                          }}
+                        >
+                          <div className="bg-brand-orange text-white p-3 rounded-full shadow-lg mb-2">
+                            <QrCode className="w-6 h-6" />
+                          </div>
+                          <span className="text-[10px] text-white font-bold uppercase tracking-widest bg-brand-dark/50 px-3 py-1 rounded-full">Download QR</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="p-2 bg-brand-orange text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Plus className="w-4 h-4 rotate-45" />
-                    </div>
-                  </a>
+                    
+                    <p className="mt-4 text-center text-[10px] text-brand-dark/50 font-medium leading-relaxed max-w-[200px]">
+                      Scan with Telebirr App or <br/> 
+                      <span className="text-brand-orange font-bold uppercase cursor-pointer hover:underline" onClick={() => copyToClipboard('+251933307614', 'telebirr')}>Copy number</span> and pay manually
+                    </p>
+                  </div>
 
                   {/* Bank Accounts */}
                   <div className="p-6 bg-brand-dark rounded-2xl text-white space-y-6">
