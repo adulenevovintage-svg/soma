@@ -68,6 +68,7 @@ const getCategoryIcon = (category: Category) => {
 };
 
 export default function App() {
+  const [showIntro, setShowIntro] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDish, setSelectedDish] = useState<MenuItem | null>(null);
@@ -185,6 +186,55 @@ export default function App() {
       handleFirestoreError(err, OperationType.DELETE, `menuItems/${id}`);
     }
   };
+
+  if (showIntro) {
+    return (
+      <div className="fixed inset-0 z-[200] bg-brand-dark flex items-center justify-center overflow-hidden">
+        <video 
+          autoPlay 
+          muted 
+          playsInline
+          onEnded={() => setShowIntro(false)}
+          className="w-full h-full object-cover"
+        >
+          <source src="https://cdn.imageurlgenerator.com/uploads/518c3b81-8da6-4851-8bd2-729a518c6af2.mp4" type="video/mp4" />
+        </video>
+        
+        {/* Overlay Overlay */}
+        <div className="absolute inset-0 bg-black/30" />
+
+        {/* Skip Button */}
+        <motion.button
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 1 }}
+          onClick={() => setShowIntro(false)}
+          className="absolute bottom-10 right-10 flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-white/20 transition-all group"
+        >
+          Skip Intro
+          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </motion.button>
+
+        {/* Brand Presence */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-10 left-10"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 overflow-hidden rounded-full border border-white/20">
+              <img 
+                src="https://cdn.phototourl.com/free/2026-04-27-1ceaf8c4-b563-4372-9717-46b05de2c956.jpg" 
+                alt="Logo" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span className="text-white font-display font-bold tracking-[0.3em]">SOMA</span>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
