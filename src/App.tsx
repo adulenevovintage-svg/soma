@@ -176,6 +176,14 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    // Safety fallback: auto-hide intro after 15 seconds
+    if (showIntro) {
+      const timer = setTimeout(() => setShowIntro(false), 15000);
+      return () => clearTimeout(timer);
+    }
+  }, [showIntro]);
+
   const handleDeleteItem = async (id: string, e: MouseEvent) => {
     e.stopPropagation();
     if (!confirm("Are you sure you want to delete this item?")) return;
@@ -195,6 +203,7 @@ export default function App() {
           muted 
           playsInline
           onEnded={() => setShowIntro(false)}
+          onError={() => setShowIntro(false)}
           className="w-full h-full object-cover"
         >
           <source src="https://cdn.imageurlgenerator.com/uploads/518c3b81-8da6-4851-8bd2-729a518c6af2.mp4" type="video/mp4" />
